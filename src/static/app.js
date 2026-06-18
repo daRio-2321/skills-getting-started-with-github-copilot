@@ -25,9 +25,46 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <p><strong>Participants (${details.participants.length}):</strong></p>
+            ${details.participants.length > 0 ? `
+              <ul class="participants-list">
+                ${details.participants.map(participant => `<li><span>${participant}</span><button class="delete-btn" data-activity="${name}" data-participant="${participant}" title="Remove participant">✕</button></li>`).join('')}
+              </ul>
+            ` : '<p class="no-participants">No participants yet</p>'}
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Add delete button event listeners
+        const deleteButtons = activityCard.querySelectorAll(".delete-btn");
+        deleteButtons.forEach(button => {
+          button.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const activity = button.getAttribute("data-activity");
+            const participant = button.getAttribute("data-participant");
+            
+            if (confirm(`Are you sure you want to remove ${participant} from ${activity}?`)) {
+              try {
+                const response = await fetch(
+                  `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(participant)}`,
+                  { method: "DELETE" }
+                );
+                
+                if (response.ok) {
+                  // Refresh activities to show updated participant list
+                  fetchActivities();
+                } else {
+                  alert("Failed to remove participant");
+                }
+              } catch (error) {
+                console.error("Error removing participant:", error);
+                alert("Error removing participant");
+              }
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -62,6 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities to show updated participant list
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
